@@ -44,7 +44,7 @@ table{width:100%;border-collapse:collapse;font-size:13px}th,td{text-align:left;p
  <div class="card"><h2>Sinais inteligentes de compra e venda</h2><p class="sub">Leitura técnica demonstrativa por ativo e período gráfico.</p>
  <div class="cols"><div><label>Escolha o ativo</label><select id="signalAsset"></select></div><div><label>Tempo de cada vela</label><select id="signalFrame"><option value="1">1 minuto</option><option value="5" selected>5 minutos</option><option value="15">15 minutos</option><option value="60">1 hora</option></select></div></div>
  <div id="signalResult" class="signal" style="margin-top:14px">Calculando leitura...</div>
- <h2 style="margin-top:18px">Análise simultânea dos quatro tempos gráficos</h2><p class="sub">O agente compara 1, 5, 15 e 60 minutos para o mesmo ativo.</p><div class="grid" id="multiFrameSignals"><div class="asset">Carregando períodos...</div></div><div class="notice">A comparação entre períodos é educativa. Um sinal só será considerado alinhado quando os quatro períodos apontarem na mesma direção; caso contrário, o painel mostrará divergência ou espera. Os dados continuam sintéticos.</div>
+ <h2 style="margin-top:18px">Análise simultânea dos quatro tempos gráficos</h2><p class="sub">O agente compara 1, 5, 15 e 60 minutos para o mesmo ativo.</p><div class="grid" id="multiFrameSignals"><div class="asset">Carregando períodos...</div></div><div id="frameConsensus" class="signal" style="margin-top:10px">Calculando consenso...</div><div class="notice">A comparação entre períodos é educativa. Um sinal só será considerado alinhado quando os quatro períodos apontarem na mesma direção; caso contrário, o painel mostrará divergência ou espera. Os dados continuam sintéticos.</div>
  <div class="grid" style="margin-top:12px"><div class="asset"><small>Entrada de referência</small><div class="price" id="sigEntry">—</div></div><div class="asset"><small>Stop didático</small><div class="price" id="sigStop">—</div></div><div class="asset"><small>Alvo didático</small><div class="price" id="sigTarget">—</div></div><div class="asset"><small>Força do sinal</small><div class="price" id="sigStrength">—</div></div></div>
  <h2 style="margin-top:18px">O que foi analisado</h2><div id="sigReasons" class="sub">—</div>
  <div class="notice">Atenção: este painel usa preços sintéticos e indicadores simplificados. Não recebe cotações ao vivo nem identifica o momento real de entrada. Stop e alvo são exemplos matemáticos, não recomendações. Use apenas para aprender e testar.</div></div></section>
@@ -84,8 +84,7 @@ function updateFrameSummary(sym){
  document.getElementById('multiFrameSignals').innerHTML=results.map(r=>{let color=r.side==='COMPRA'?'#19d49a':r.side==='VENDA'?'#ff647c':'#f7c65b';return '<div class="asset"><small>GRÁFICO '+(r.f===60?'1 HORA':r.f+' MIN')+'</small><div class="price" style="color:'+color+'">'+r.side+'</div><small>Força didática: '+r.score+'/100</small></div>'}).join('');
  let aligned=results.every(r=>r.side==='COMPRA')?'COMPRA':results.every(r=>r.side==='VENDA')?'VENDA':'DIVERGÊNCIA / AGUARDAR';
  let color=aligned==='COMPRA'?'#19d49a':aligned==='VENDA'?'#ff647c':'#f7c65b';
- document.getElementById('multiFrameSignals').insertAdjacentHTML('afterend','<p id="frameConsensus" class="signal" style="margin-top:10px">Consenso dos quatro períodos: <b style="color:'+color+'">'+aligned+'</b></p>');
- let old=document.getElementById('frameConsensus'); if(old && old.previousElementSibling!==document.getElementById('multiFrameSignals')) old.remove();
+ document.getElementById('frameConsensus').innerHTML='Consenso dos quatro períodos: <b style="color:'+color+'">'+aligned+'</b>';
 }
 function updateSignal(){
  let sym=document.getElementById("signalAsset").value||assets[0].s;
