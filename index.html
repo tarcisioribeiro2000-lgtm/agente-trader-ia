@@ -92,24 +92,21 @@ function frameReading(a,frame){
  return {score:Math.max(0,Math.min(100,Math.round(score))),side:score>=68?'COMPRA':score<=32?'VENDA':'AGUARDAR'};
 }
 function updateFrameSummary(sym){
- let a=assets.find(x=>x.s===sym)||assets[0],frames=[1,5,15,60],results=frames.map(f=>({f,...frameReading(a,f)}));
- document.getElementById('multiFrameSignals').innerHTML=results.map(r=>{let color=r.side==='COMPRA'?'#19d49a':r.side==='VENDA'?'#ff647c':'#f7c65b';return '<div class="asset"><small>GRÁFICO '+(r.f===60?'1 HORA':r.f+' MIN')+'</small><div class="price" style="color:'+color+'">'+r.side+'</div><small>Força didática: '+r.score+'/100</small></div>'}).join('');
- let aligned=results.every(r=>r.side==='COMPRA')?'COMPRA':results.every(r=>r.side==='VENDA')?'VENDA':'DIVERGÊNCIA / AGUARDAR';
- let color=aligned==='COMPRA'?'#19d49a':aligned==='VENDA'?'#ff647c':'#f7c65b';
- document.getElementById('frameConsensus').innerHTML='Consenso dos quatro períodos: <b style="color:'+color+'">'+aligned+'</b>';
+ let frames=[1,5,15,60];
+ document.getElementById('multiFrameSignals').innerHTML=frames.map(f=>'<div class="asset"><small>GRÁFICO '+(f===60?'1 HORA':f+' MIN')+'</small><div class="price yellow">SEM DADOS</div><small>Aguardando conexão de mercado</small></div>').join('');
+ document.getElementById('frameConsensus').innerHTML='<b class="yellow">AGUARDANDO DADOS REAIS</b> · Não há consenso calculável sem cotações atualizadas.';
 }
 function updateSignal(){
- let sym=document.getElementById("signalAsset").value||assets[0].s;
- let frame=Number(document.getElementById("signalFrame").value),a=assets.find(x=>x.s===sym)||assets[0],seed=assets.findIndex(x=>x.s===a.s)+1;
+ let sym=document.getElementById('signalAsset').value||assets[0].s;
+ let frame=Number(document.getElementById('signalFrame').value);
+ let a=assets.find(x=>x.s===sym)||assets[0];
  updateFrameSummary(sym);
- let v=Array.from({length:60},(_,i)=>a.p*(1+Math.sin((i+seed)*.31)*.008/Math.sqrt(frame)+Math.cos((i+seed)*.13)*.006/Math.sqrt(frame)+(i-30)*.00012/Math.sqrt(frame)));
- let last=v[v.length-1],sma9=v.slice(-9).reduce((x,y)=>x+y,0)/9,sma21=v.slice(-21).reduce((x,y)=>x+y,0)/21,changes=v.slice(-15).slice(1).map((x,i)=>x-v.slice(-15)[i]),g=changes.filter(x=>x>0).reduce((x,y)=>x+y,0),l=Math.abs(changes.filter(x=>x<0).reduce((x,y)=>x+y,0)),rsi=l===0?100:100-100/(1+g/l);
- let score=50+(last>sma9?12:-12)+(sma9>sma21?18:-18)+(rsi>52&&rsi<70?12:(rsi<48&&rsi>30?-12:0)),buy=score>=68,sell=score<=32,atr=last*.006*Math.sqrt(frame/5),stop=buy?last-atr:last+atr,target=buy?last+atr*1.5:last-atr*1.5;
- let label=buy?"POSSÍVEL COMPRA (DEMO)":sell?"POSSÍVEL VENDA / EVITAR COMPRA (DEMO)":"AGUARDAR — SEM CONFIRMAÇÃO",color=buy?"#19d49a":sell?"#ff647c":"#f7c65b";
- document.getElementById("signalResult").innerHTML="<b style=\"color:"+color+"\">"+label+"</b><br>Ativo: "+a.s+" · "+a.m+" · Gráfico: "+(frame===60?"1 hora":frame+" minuto(s)")+"<br>Pontuação didática: "+Math.max(0,Math.min(100,Math.round(score)))+"/100 · RSI simplificado: "+rsi.toFixed(1)+"<br><span style=\"color:#91a4b8\">Números fictícios, sem cotação ao vivo.</span>";
- document.getElementById("sigEntry").textContent=fmt(last);document.getElementById("sigStop").textContent=fmt(stop);document.getElementById("sigTarget").textContent=fmt(target);
- document.getElementById("sigStrength").textContent=Math.abs(score-50)>25?"Forte (demo)":Math.abs(score-50)>12?"Moderado (demo)":"Fraco (demo)";
- document.getElementById("sigReasons").innerHTML="• Preço "+(last>sma9?"acima":"abaixo")+" da média de 9 períodos.<br>• Média de 9 períodos "+(sma9>sma21?"acima":"abaixo")+" da média de 21 períodos.<br>• RSI simplificado: "+rsi.toFixed(1)+".<br>• Stop e alvo baseados em volatilidade fictícia.";
+ document.getElementById('signalResult').innerHTML='<b class="yellow">AGUARDANDO CONEXÃO COM DADOS DO MERCADO</b><br>Ativo: '+a.s+' · '+a.m+' · Período: '+(frame===60?'1 hora':frame+' minuto(s)')+'<br>O indicador ainda não recebe candles ou preços ao vivo. Por segurança, não emitirá COMPRA ou VENDA com valores fictícios.';
+ document.getElementById('sigEntry').textContent='—';
+ document.getElementById('sigStop').textContent='—';
+ document.getElementById('sigTarget').textContent='—';
+ document.getElementById('sigStrength').textContent='Indisponível';
+ document.getElementById('sigReasons').textContent='Conecte uma fonte de cotações/candles em tempo real para calcular tendência, confirmação, entrada, stop e alvo. Até lá, não use os preços demonstrativos para operar.';
 }
 function analysis(){let scores=assets.map(a=>({a,score:Math.round(48+Math.sin(a.p)*12)})).sort((a,b)=>b.score-a.score);let top=scores[0];document.getElementById('aiSignal').innerHTML=`<b>${top.a.s} · ${top.a.m}</b><br>Leitura demonstrativa: viés neutro, com pontuação de regra ${top.score}/100.<br><span style="color:#91a4b8">Isto não é previsão nem sinal de compra. Dados sintéticos.</span>`}
 function render(){document.getElementById('cash').textContent=fmt(state.cash);document.getElementById('equity').textContent=fmt(equity());let result=equity()-state.initial;let pnl=document.getElementById('pnl');pnl.textContent=fmt(result);pnl.className=result>=0?'green':'red';document.getElementById('count').textContent=state.history.length;document.getElementById('marketCards').innerHTML=marketCards();analysis();
