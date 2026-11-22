@@ -1,0 +1,18 @@
+# AGENTE TRADER IA — versão zero custo
+
+Protótipo web responsivo e autocontido. Não precisa de instalação, servidor, API paga ou chave de IA.
+
+## Como abrir
+1. Abra `index.html` no navegador (Chrome recomendado).
+2. O saldo inicial é R$ 10,00 simulados.
+3. Use as abas Mercados, Simulador, Gestão de risco e Histórico.
+
+## Limitações importantes
+- Todos os preços e gráficos são sintéticos/demonstrativos.
+- A análise é baseada em regras locais simples; não usa um modelo de IA remoto.
+- Não há conexão com corretoras nem envio de ordens reais.
+- Os dados ficam no armazenamento local do navegador e não sincronizam entre aparelhos.
+- Não é recomendação de investimento.
+
+## Hospedagem gratuita
+Pode ser publicado como site estático no GitHub Pages, sem comprar domínio. O endereço será um subdomínio `github.io`.
