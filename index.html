@@ -44,6 +44,7 @@ table{width:100%;border-collapse:collapse;font-size:13px}th,td{text-align:left;p
  <div class="card"><h2>Sinais inteligentes de compra e venda</h2><p class="sub">Leitura técnica demonstrativa por ativo e período gráfico.</p>
  <div class="cols"><div><label>Escolha o ativo</label><select id="signalAsset"></select></div><div><label>Tempo de cada vela</label><select id="signalFrame"><option value="1">1 minuto</option><option value="5" selected>5 minutos</option><option value="15">15 minutos</option><option value="60">1 hora</option></select></div></div>
  <div id="signalResult" class="signal" style="margin-top:14px">Calculando leitura...</div>
+ <h2 style="margin-top:18px">Análise simultânea dos quatro tempos gráficos</h2><p class="sub">O agente compara 1, 5, 15 e 60 minutos para o mesmo ativo.</p><div class="grid" id="multiFrameSignals"><div class="asset">Carregando períodos...</div></div><div class="notice">A comparação entre períodos é educativa. Um sinal só será considerado alinhado quando os quatro períodos apontarem na mesma direção; caso contrário, o painel mostrará divergência ou espera. Os dados continuam sintéticos.</div>
  <div class="grid" style="margin-top:12px"><div class="asset"><small>Entrada de referência</small><div class="price" id="sigEntry">—</div></div><div class="asset"><small>Stop didático</small><div class="price" id="sigStop">—</div></div><div class="asset"><small>Alvo didático</small><div class="price" id="sigTarget">—</div></div><div class="asset"><small>Força do sinal</small><div class="price" id="sigStrength">—</div></div></div>
  <h2 style="margin-top:18px">O que foi analisado</h2><div id="sigReasons" class="sub">—</div>
  <div class="notice">Atenção: este painel usa preços sintéticos e indicadores simplificados. Não recebe cotações ao vivo nem identifica o momento real de entrada. Stop e alvo são exemplos matemáticos, não recomendações. Use apenas para aprender e testar.</div></div></section>
@@ -70,9 +71,26 @@ function totalInvested(){return state.positions.reduce((s,p)=>s+p.qty*price(asse
 function equity(){return state.cash+totalInvested()}
 function marketCards(){return ['B3','NYSE','Nasdaq'].map(m=>{let list=assets.filter(a=>a.m===m);return `<div class="asset"><b>${m}</b><small>${list.length} ativos · demonstração</small><div class="price">${list[0].s}</div><small>${fmt(list[0].p)}</small></div>`}).join('')}
 function chartDraw(){let c=document.getElementById('chart');if(!c)return;let dpr=window.devicePixelRatio||1,w=c.clientWidth,h=190;c.width=w*dpr;c.height=h*dpr;let x=c.getContext('2d');x.scale(dpr,dpr);x.clearRect(0,0,w,h);let sym=document.getElementById('chartAsset').value;let a=assets.find(z=>z.s===sym);let pts=Array.from({length:42},(_,i)=>a.p*(1+Math.sin(i*.42)*.012+Math.cos(i*.19)*.006+(i/42)*.004));let mn=Math.min(...pts),mx=Math.max(...pts);x.strokeStyle='#203b53';x.lineWidth=1;for(let i=1;i<4;i++){let y=h*i/4;x.beginPath();x.moveTo(0,y);x.lineTo(w,y);x.stroke()}x.beginPath();pts.forEach((v,i)=>{let px=i*w/(pts.length-1),py=h-12-(v-mn)/(mx-mn||1)*(h-28);i?x.lineTo(px,py):x.moveTo(px,py)});x.strokeStyle='#19d49a';x.lineWidth=2.5;x.stroke();x.lineTo(w,h);x.lineTo(0,h);x.closePath();x.fillStyle='rgba(25,212,154,.09)';x.fill();x.fillStyle='#91a4b8';x.font='11px system-ui';x.fillText('SÉRIE SINTÉTICA · '+sym,8,14)}
+function frameReading(a,frame){
+ let seed=assets.findIndex(x=>x.s===a.s)+1;
+ let v=Array.from({length:60},(_,i)=>a.p*(1+Math.sin((i+seed)*.31)*.008/Math.sqrt(frame)+Math.cos((i+seed)*.13)*.006/Math.sqrt(frame)+(i-30)*.00012/Math.sqrt(frame)));
+ let last=v[59],sma9=v.slice(-9).reduce((x,y)=>x+y,0)/9,sma21=v.slice(-21).reduce((x,y)=>x+y,0)/21;
+ let changes=v.slice(-15).slice(1).map((x,i)=>x-v.slice(-15)[i]),g=changes.filter(x=>x>0).reduce((x,y)=>x+y,0),l=Math.abs(changes.filter(x=>x<0).reduce((x,y)=>x+y,0)),rsi=l===0?100:100-100/(1+g/l);
+ let score=50+(last>sma9?12:-12)+(sma9>sma21?18:-18)+(rsi>52&&rsi<70?12:(rsi<48&&rsi>30?-12:0));
+ return {score:Math.max(0,Math.min(100,Math.round(score))),side:score>=68?'COMPRA':score<=32?'VENDA':'AGUARDAR'};
+}
+function updateFrameSummary(sym){
+ let a=assets.find(x=>x.s===sym)||assets[0],frames=[1,5,15,60],results=frames.map(f=>({f,...frameReading(a,f)}));
+ document.getElementById('multiFrameSignals').innerHTML=results.map(r=>{let color=r.side==='COMPRA'?'#19d49a':r.side==='VENDA'?'#ff647c':'#f7c65b';return '<div class="asset"><small>GRÁFICO '+(r.f===60?'1 HORA':r.f+' MIN')+'</small><div class="price" style="color:'+color+'">'+r.side+'</div><small>Força didática: '+r.score+'/100</small></div>'}).join('');
+ let aligned=results.every(r=>r.side==='COMPRA')?'COMPRA':results.every(r=>r.side==='VENDA')?'VENDA':'DIVERGÊNCIA / AGUARDAR';
+ let color=aligned==='COMPRA'?'#19d49a':aligned==='VENDA'?'#ff647c':'#f7c65b';
+ document.getElementById('multiFrameSignals').insertAdjacentHTML('afterend','<p id="frameConsensus" class="signal" style="margin-top:10px">Consenso dos quatro períodos: <b style="color:'+color+'">'+aligned+'</b></p>');
+ let old=document.getElementById('frameConsensus'); if(old && old.previousElementSibling!==document.getElementById('multiFrameSignals')) old.remove();
+}
 function updateSignal(){
  let sym=document.getElementById("signalAsset").value||assets[0].s;
  let frame=Number(document.getElementById("signalFrame").value),a=assets.find(x=>x.s===sym)||assets[0],seed=assets.findIndex(x=>x.s===a.s)+1;
+ updateFrameSummary(sym);
  let v=Array.from({length:60},(_,i)=>a.p*(1+Math.sin((i+seed)*.31)*.008/Math.sqrt(frame)+Math.cos((i+seed)*.13)*.006/Math.sqrt(frame)+(i-30)*.00012/Math.sqrt(frame)));
  let last=v[v.length-1],sma9=v.slice(-9).reduce((x,y)=>x+y,0)/9,sma21=v.slice(-21).reduce((x,y)=>x+y,0)/21,changes=v.slice(-15).slice(1).map((x,i)=>x-v.slice(-15)[i]),g=changes.filter(x=>x>0).reduce((x,y)=>x+y,0),l=Math.abs(changes.filter(x=>x<0).reduce((x,y)=>x+y,0)),rsi=l===0?100:100-100/(1+g/l);
  let score=50+(last>sma9?12:-12)+(sma9>sma21?18:-18)+(rsi>52&&rsi<70?12:(rsi<48&&rsi>30?-12:0)),buy=score>=68,sell=score<=32,atr=last*.006*Math.sqrt(frame/5),stop=buy?last-atr:last+atr,target=buy?last+atr*1.5:last-atr*1.5;
